@@ -1,0 +1,93 @@
+# Production stack for satzonemini.me.
+#
+# Run with:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Key differences from docker-compose.yml (dev):
+#   - Caddy fronts everything, terminates TLS via Let's Encrypt, proxies to the frontend.
+#   - Postgres / Redis / API / frontend are NOT exposed on the host — only Caddy is.
+#   - No source-code volume mounts. The image is what runs.
+#   - API runs with --workers 2 (no --reload).
+#   - `restart: unless-stopped` everywhere so the stack survives reboots.
+
+services:
+  miniapp-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-miniapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+      POSTGRES_DB: ${POSTGRES_DB:-miniapp}
+    volumes:
+      - miniapp_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-miniapp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  miniapp-redis:
+    image: redis:7-alpine
+    volumes:
+      - miniapp_redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: miniapp-db
+      POSTGRES_PORT: 5432
+      REDIS_HOST: miniapp-redis
+      REDIS_PORT: 6379
+    depends_on:
+      miniapp-db:
+        condition: service_healthy
+      miniapp-redis:
+        condition: service_healthy
+    volumes:
+      - miniapp_media:/app/media
+    command:
+      [
+        "sh",
+        "-c",
+        "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips=*",
+      ]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-/api/v1}
+        VITE_WEBSITE_URL: ${WEBSITE_URL:-}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  miniapp_db_data:
+  miniapp_redis_data:
+  miniapp_media:
+  caddy_data:
+  caddy_config:

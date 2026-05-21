@@ -1,0 +1,39 @@
+# Caddy auto-provisions a Let's Encrypt cert for satzonemini.me on first boot.
+# Make sure DNS is pointing here and ports 80/443 are reachable from the internet
+# before starting — Caddy uses the ACME HTTP-01 challenge on port 80.
+
+{
+	# Replace with your email so Let's Encrypt can warn you if a cert is failing
+	# to renew. Comment out the line entirely to use anonymous registration.
+	email satzoneplatform@gmail.com
+}
+
+satzonemini.me {
+	encode gzip zstd
+
+	# All traffic goes to the frontend container — its nginx serves the SPA
+	# and reverse-proxies /api and /media to the api container.
+	reverse_proxy frontend:80
+
+	header {
+		# HSTS — once a client has visited the site, refuse anything but HTTPS.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		# Allow embedding inside Telegram only.
+		Content-Security-Policy "frame-ancestors https://web.telegram.org https://*.telegram.org https://*.t.me"
+		# Strip the Server header.
+		-Server
+	}
+
+	# Per-IP rate limit at the edge is unnecessary — the API already has one.
+	# Block obvious junk paths quickly.
+	@junk path /.env /.git/* /wp-admin/* /xmlrpc.php /phpmyadmin/*
+	respond @junk 404
+}
+
+# Apex-only deployment — redirect www to bare.
+www.satzonemini.me {
+	redir https://satzonemini.me{uri} permanent
+}
