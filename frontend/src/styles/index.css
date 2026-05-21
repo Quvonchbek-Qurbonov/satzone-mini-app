@@ -1,0 +1,181 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --tg-bg: #ffffff;
+  --tg-text: #1a1a1a;
+  --tg-hint: #707070;
+  --tg-link: #2481cc;
+  --tg-button: #2481cc;
+  --tg-button-text: #ffffff;
+  --tg-secondary-bg: #f4f4f4;
+  --tg-accent: #c41230;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* Player split-pane layout (lifted from IELTS refs) */
+.player-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+.player-main {
+  flex: 1 1 auto;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+.player-pane {
+  overflow-y: auto;
+  padding: 20px 22px 32px;
+  min-width: 180px;
+}
+.player-pane-left {
+  background: var(--tg-secondary-bg);
+  width: 50%;
+  flex: 0 0 50%;
+}
+.player-pane-right {
+  background: var(--tg-bg);
+  flex: 1 1 auto;
+}
+.player-divider {
+  width: 6px;
+  background: #e0e0e0;
+  cursor: col-resize;
+  flex: 0 0 6px;
+  position: relative;
+  transition: background 0.15s;
+}
+.player-divider:hover,
+.player-divider.dragging {
+  background: var(--tg-accent);
+}
+.player-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  background: #999;
+  border-radius: 1px;
+}
+
+.passage-title {
+  font-size: 1.4em;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.passage-sub {
+  font-size: 0.95em;
+  color: #666;
+  font-style: italic;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--tg-accent);
+}
+.passage-body p {
+  margin-bottom: 14px;
+  text-align: justify;
+  hyphens: auto;
+  line-height: 1.65;
+}
+
+.q-pill {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #bbb;
+  background: var(--tg-bg);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  color: var(--tg-text);
+  transition: all 0.12s;
+}
+.q-pill:hover { background: #ebebeb; border-color: #999; }
+.q-pill.answered { font-weight: 700; background: #ffd54f; border-color: #f9a825; color: #5d4037; }
+.q-pill.current { background: var(--tg-button); color: var(--tg-button-text); border-color: var(--tg-button); }
+.q-pill.flagged::after {
+  content: "★";
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  color: var(--tg-accent);
+  font-size: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+.btn-primary { background: var(--tg-button); color: var(--tg-button-text); }
+.btn-primary:hover:not(:disabled) { opacity: 0.9; }
+.btn-secondary { background: var(--tg-secondary-bg); color: var(--tg-text); }
+.btn-danger { background: var(--tg-accent); color: #fff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.choice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--tg-bg);
+  transition: background 0.12s, border-color 0.12s;
+  margin-bottom: 8px;
+  user-select: none;
+}
+.choice-row:hover { background: #fafafa; }
+.choice-row.selected {
+  background: rgba(36, 129, 204, 0.12);
+  border-color: var(--tg-button);
+}
+.choice-letter {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #999;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.choice-row.selected .choice-letter {
+  background: var(--tg-button);
+  color: var(--tg-button-text);
+  border-color: var(--tg-button);
+}

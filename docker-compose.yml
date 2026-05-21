@@ -1,0 +1,75 @@
+services:
+  miniapp-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-miniapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-miniapp}
+      POSTGRES_DB: ${POSTGRES_DB:-miniapp}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - miniapp_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-miniapp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  miniapp-redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - miniapp_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: miniapp-db
+      POSTGRES_PORT: 5432
+      REDIS_HOST: miniapp-redis
+      REDIS_PORT: 6379
+    depends_on:
+      miniapp-db:
+        condition: service_healthy
+      miniapp-redis:
+        condition: service_healthy
+    ports:
+      - "${API_HOST_PORT:-8100}:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+      - ./backend/alembic.ini:/app/alembic.ini
+      - miniapp_media:/app/media
+    command:
+      [
+        "sh",
+        "-c",
+        "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+      ]
+    extra_hosts:
+      # Talk to satzone Postgres running on the host. Adjust for your prod setup.
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-/api/v1}
+        VITE_WEBSITE_URL: ${WEBSITE_URL:-}
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
+volumes:
+  miniapp_db_data:
+  miniapp_redis_data:
+  miniapp_media:
